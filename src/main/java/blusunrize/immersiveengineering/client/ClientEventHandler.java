@@ -1129,10 +1129,17 @@ public class ClientEventHandler implements IResourceManagerReloadListener
 			if(!stack.isEmpty()&&stack.getItem() instanceof ItemDrill&&((ItemDrill)stack.getItem()).isEffective(world.getBlockState(event.getTarget().getBlockPos()).getMaterial()))
 			{
 				ItemStack head = ((ItemDrill)stack.getItem()).getHead(stack);
-				if(!head.isEmpty())
+				//Undertaker drill edit code
+				boolean isSingleBlockBreakMode = false;
+				if(stack.getTagCompound() != null) {
+					isSingleBlockBreakMode = stack.getTagCompound().getBoolean(ItemDrill.inSingleBlockBreakMode);
+				}
+				if(!head.isEmpty() && !isSingleBlockBreakMode)
 				{
-					ImmutableList<BlockPos> blocks = ((IDrillHead)head.getItem()).getExtraBlocksDug(head, world, event.getPlayer(), event.getTarget());
-					drawAdditionalBlockbreak(event.getContext(), event.getPlayer(), event.getPartialTicks(), blocks);
+					if(!Minecraft.getMinecraft().player.isSneaking()) {
+						ImmutableList<BlockPos> blocks = ((IDrillHead)head.getItem()).getExtraBlocksDug(head, world, event.getPlayer(), event.getTarget());
+						drawAdditionalBlockbreak(event.getContext(), event.getPlayer(), event.getPartialTicks(), blocks);
+					}
 				}
 			}
 		}

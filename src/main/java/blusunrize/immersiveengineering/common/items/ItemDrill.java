@@ -8,6 +8,20 @@
 
 package blusunrize.immersiveengineering.common.items;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.apache.commons.lang3.tuple.Triple;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
+
 import blusunrize.immersiveengineering.api.Lib;
 import blusunrize.immersiveengineering.api.energy.DieselHandler;
 import blusunrize.immersiveengineering.api.shader.CapabilityShader;
@@ -26,9 +40,6 @@ import blusunrize.immersiveengineering.common.util.ItemNBTHelper;
 import blusunrize.immersiveengineering.common.util.Utils;
 import blusunrize.immersiveengineering.common.util.chickenbones.Matrix4;
 import blusunrize.immersiveengineering.common.util.inventory.IEItemStackHandler;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Multimap;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -49,11 +60,15 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.play.server.SPacketBlockChange;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeHooks;
@@ -70,24 +85,41 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
-import org.apache.commons.lang3.tuple.Triple;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 public class ItemDrill extends ItemUpgradeableTool implements IAdvancedFluidItem, IOBJModelCallback<ItemStack>, ITool
 {
-	public static Material[] validMaterials = {Material.ANVIL, Material.CLAY, Material.GLASS, Material.GRASS, Material.GROUND, Material.ICE, Material.IRON, Material.PACKED_ICE, Material.PISTON, Material.ROCK, Material.SAND, Material.SNOW};
-
+	public static final String inSingleBlockBreakMode = "noaoetag";
+	
+	public static Material[] validMaterials = new Material[] { Material.ANVIL, Material.CARPET, Material.CLAY, Material.CLOTH, 
+			Material.CRAFTED_SNOW, Material.GLASS, Material.GRASS, Material.GROUND, Material.ICE, Material.IRON, Material.LEAVES, 
+			Material.PACKED_ICE, Material.PISTON, Material.ROCK, Material.SAND, Material.SNOW, Material.WEB, Material.WOOD };
+	
 	public ItemDrill()
 	{
 		super("drill", 1, "DRILL", "diesel");
 	}
 
+	@Override
+	public ActionResult<ItemStack> onItemRightClick(final World worldIn, final EntityPlayer playerIn, final EnumHand hand) {
+        if (!worldIn.isRemote && hand == EnumHand.MAIN_HAND && playerIn.isSneaking()) {
+            final ItemStack stack = playerIn.getHeldItemMainhand();
+            if (!stack.isEmpty()) {
+                if (stack.getTagCompound() == null) {
+                    stack.setTagCompound(new NBTTagCompound());
+                }
+                final boolean isInSingleBlockMode = stack.getTagCompound().getBoolean(inSingleBlockBreakMode);
+                stack.getTagCompound().setBoolean(inSingleBlockBreakMode, !isInSingleBlockMode);
+                if (isInSingleBlockMode) {
+                    playerIn.sendMessage((ITextComponent)new TextComponentString("Drill set to AOE mode."));
+                }
+                else {
+                    playerIn.sendMessage((ITextComponent)new TextComponentString("Drill set to Single Block Break mode."));
+                }
+            }
+        }
+        return (ActionResult<ItemStack>)new ActionResult(EnumActionResult.PASS, (Object)playerIn.getHeldItem(hand));
+    }
+	
 	@Override
 	public int getSlotCount(ItemStack stack)
 	{
@@ -154,6 +186,14 @@ public class ItemDrill extends ItemUpgradeableTool implements IAdvancedFluidItem
 			String status = ""+(quote < .1?TextFormatting.RED: quote < .3?TextFormatting.GOLD: quote < .6?TextFormatting.YELLOW: TextFormatting.GREEN);
 			list.add(I18n.format(Lib.DESC_FLAVOUR+"drill.headDamage")+" "+status+dmg+"/"+maxDmg);
 		}
+		if (stack.getTagCompound() != null) {
+            if (stack.getTagCompound().getBoolean(inSingleBlockBreakMode)) {
+                list.add("IS IN SINGLE-BLOCK BREAK MODE");
+            }
+            else {
+                list.add("Is in normal/AOE mode");
+            }
+        }
 	}
 
 	/*RENDER STUFF*/
@@ -439,7 +479,7 @@ public class ItemDrill extends ItemUpgradeableTool implements IAdvancedFluidItem
 	public Set<String> getToolClasses(ItemStack stack)
 	{
 		if(!getHead(stack).isEmpty()&&!isDrillBroken(stack))
-			return ImmutableSet.of("pickaxe", "shovel");
+			return ImmutableSet.of("pickaxe", "shovel", "axe");
 		return super.getToolClasses(stack);
 	}
 
@@ -484,6 +524,10 @@ public class ItemDrill extends ItemUpgradeableTool implements IAdvancedFluidItem
 		World world = player.world;
 		if(player.isSneaking()||world.isRemote||!(player instanceof EntityPlayerMP))
 			return false;
+		if (stack.getTagCompound() != null && stack.getTagCompound().getBoolean(inSingleBlockBreakMode)) {
+            return false;
+        }
+		
 		RayTraceResult mop = this.rayTrace(world, player, true);
 		ItemStack head = getHead(stack);
 		if(mop==null||head.isEmpty()||this.isDrillBroken(stack))

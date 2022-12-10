@@ -24,13 +24,17 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
+import net.minecraftforge.common.util.EnumHelper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
@@ -44,10 +48,10 @@ public class ItemDrillhead extends ItemIEBase implements IDrillHead
 		super("drillhead", 1, "steel", "iron");
 		perms = new DrillHeadPerm[this.subNames.length];
 		//Maximal damage is slightly proportionate to pickaxes
-		addPerm(0, new DrillHeadPerm("ingotSteel", 3, 1, 3, 10, 7, 10000, "immersiveengineering:items/drill_diesel"));
-		addPerm(1, new DrillHeadPerm("ingotIron", 2, 1, 2, 9, 6, 6000, "immersiveengineering:items/drill_iron"));
+		addPerm(0, new DrillHeadPerm("ingotSteel", 3, 1, 3, 38, 7, 10000, "immersiveengineering:items/drill_diesel"));
+		addPerm(1, new DrillHeadPerm("ingotIron", 2, 1, 2, 12, 6, 6000, "immersiveengineering:items/drill_iron"));
 	}
-
+	
 	public DrillHeadPerm[] perms;
 
 	private void addPerm(int i, DrillHeadPerm perm)
